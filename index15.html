@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Expense Tracker</title>
+    <style>
+        :root {
+            --primary: #197b32;
+            --danger: #ef233c;
+            --bg: #552b8f;
+            --card-bg: #ad5f5f;
+            --text: #2e8da4;
+            --border: #c52f21;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background-color: var(--card-bg);
+            width: 100%;
+            max-width: 600px;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+        .stat-card h3 {
+            font-size: 1.5rem;
+            margin-top: 5px;
+            color: var(--primary);
+        }
+        .form-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        input, select, button {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+            outline: none;
+        }
+        input, select {
+            flex: 1;
+            min-width: 120px;
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #3f37c9;
+        }
+        .btn-danger {
+            background-color: var(--danger);
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+        .btn-danger:hover {
+            background-color: #d90429;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0 10px 0;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+        .expense-list {
+            list-style: none;
+        }
+        .expense-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg);
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 5px solid var(--primary);
+        }
+        .expense-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .expense-name {
+            font-weight: bold;
+        }
+        .expense-category {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .expense-amount {
+            font-weight: bold;
+            margin-right: 15px;
+        }
+        .expense-right {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Daily Expense Tracker</h2>
+
+    <div class="dashboard">
+        <div class="stat-card">
+            <small>Total Expenses</small>
+            <h3 id="totalExpense">₹0.00</h3>
+        </div>
+        <div class="stat-card">
+            <small>Remaining Budget</small>
+            <h3 id="remainingBudget">₹0.00</h3>
+        </div>
+        <div class="stat-card">
+            <small>Highest Expense</small>
+            <h3 id="highestExpense">₹0.00</h3>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <input type="number" id="budgetInput" placeholder="Set Monthly Budget" min="0">
+        <button onclick="setBudget()">Set Budget</button>
+    </div>
+
+    <div class="form-group">
+        <input type="text" id="expenseName" placeholder="Expense Name">
+        <input type="number" id="expenseAmount" placeholder="Amount" min="0">
+        <select id="expenseCategory">
+            <option value="Food">Food</option>
+            <option value="Travel">Travel</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Other">Other</option>
+        </select>
+        <button onclick="addExpense()">Add Expense</button>
+    </div>
+
+    <div class="controls">
+        <h3>Expense History</h3>
+        <select id="filterCategory" onchange="renderExpenses()">
+            <option value="All">All Categories</option>
+            <option value="Food">Food</option>
+            <option value="Travel">Travel</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Other">Other</option>
+        </select>
+    </div>
+
+    <ul class="expense-list" id="expenseList"></ul>
+</div>
+
+<script>
+    let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+    let budget = parseFloat(localStorage.getItem('budget')) || 0;
+
+    const expenseNameEl = document.getElementById('expenseName');
+    const expenseAmountEl = document.getElementById('expenseAmount');
+    const expenseCategoryEl = document.getElementById('expenseCategory');
+    const budgetInputEl = document.getElementById('budgetInput');
+    const expenseListEl = document.getElementById('expenseList');
+    const filterCategoryEl = document.getElementById('filterCategory');
+
+    const totalExpenseEl = document.getElementById('totalExpense');
+    const remainingBudgetEl = document.getElementById('remainingBudget');
+    const highestExpenseEl = document.getElementById('highestExpense');
+
+    budgetInputEl.value = budget > 0 ? budget : '';
+    updateDashboard();
+    renderExpenses();
+
+    function setBudget() {
+        const newBudget = parseFloat(budgetInputEl.value);
+        if (isNaN(newBudget) || newBudget < 0) {
+            alert('Please enter a valid budget amount.');
+            return;
+        }
+        budget = newBudget;
+        saveData();
+        updateDashboard();
+    }
+
+    function addExpense() {
+        const name = expenseNameEl.value.trim();
+        const amount = parseFloat(expenseAmountEl.value);
+        const category = expenseCategoryEl.value;
+
+        if (!name || isNaN(amount) || amount <= 0) {
+            alert('Please enter a valid expense name and amount.');
+            return;
+        }
+
+        const newExpense = {
+            id: Date.now(),
+            name,
+            amount,
+            category
+        };
+
+        expenses.push(newExpense);
+        
+        expenseNameEl.value = '';
+        expenseAmountEl.value = '';
+        
+        saveData();
+        renderExpenses();
+        updateDashboard();
+    }
+
+    function deleteExpense(id) {
+        expenses = expenses.filter(expense => expense.id !== id);
+        saveData();
+        renderExpenses();
+        updateDashboard();
+    }
+
+    function renderExpenses() {
+        expenseListEl.innerHTML = '';
+        const filter = filterCategoryEl.value;
+
+        const filteredExpenses = filter === 'All' 
+            ? expenses 
+            : expenses.filter(expense => expense.category === filter);
+
+        filteredExpenses.forEach(expense => {
+            const li = document.createElement('li');
+            li.className = 'expense-item';
+            li.innerHTML = `
+                <div class="expense-info">
+                    <span class="expense-name">${expense.name}</span>
+                    <span class="expense-category">${expense.category}</span>
+                </div>
+                <div class="expense-right">
+                    <span class="expense-amount">₹${expense.amount.toFixed(2)}</span>
+                    <button class="btn-danger" onclick="deleteExpense(${expense.id})">Delete</button>
+                </div>
+            `;
+            expenseListEl.appendChild(li);
+        });
+    }
+
+    function updateDashboard() {
+        const total = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+        const highest = expenses.length > 0 ? Math.max(...expenses.map(e => e.amount)) : 0;
+        const remaining = budget - total;
+
+        totalExpenseEl.textContent = `₹${total.toFixed(2)}`;
+        highestExpenseEl.textContent = `₹${highest.toFixed(2)}`;
+        
+        remainingBudgetEl.textContent = `₹${remaining.toFixed(2)}`;
+        remainingBudgetEl.style.color = remaining < 0 ? 'var(--danger)' : 'var(--text)';
+    }
+
+    function saveData() {
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+        localStorage.setItem('budget', budget.toString());
+    }
+</script>
+
+</body>
+</html>
